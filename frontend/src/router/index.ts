@@ -12,17 +12,24 @@ import ChangePasswordView from '../views/auth/ChangePasswordView.vue'
 
 // 主页面
 import DashboardView from '../views/dashboard/DashboardView.vue'
-import StatsView from '../views/stats/StatsView.vue'
 import ProfileView from '../views/ProfileView.vue'
-import SettingsView from '../views/SettingsView.vue'
-import ColorSchemeDemo from '../views/ColorSchemeDemo.vue'
+
+// 前台页面 (客户)
+import BooksView from '../views/books/BooksView.vue'
+import CartView from '../views/cart/CartView.vue'
+import OrdersView from '../views/orders/OrdersView.vue'
+import AccountView from '../views/account/AccountView.vue'
+
+// 后台页面 (管理员)
+import AdminOrdersView from '../views/admin/AdminOrdersView.vue'
+import InventoryView from '../views/admin/InventoryView.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         {
             path: '/',
-            redirect: '/dashboard',
+            redirect: '/books',
         },
         {
             path: '/auth',
@@ -47,35 +54,68 @@ const router = createRouter({
             component: AppLayout,
             meta: { requiresAuth: true },
             children: [
+                // 前台 - 图书浏览
                 {
-                    path: 'dashboard',
-                    name: 'Dashboard',
-                    component: DashboardView,
+                    path: 'books',
+                    name: 'Books',
+                    component: BooksView,
+                    meta: { title: '图书商城' },
                 },
+                // 前台 - 购物车
                 {
-                    path: 'stats',
-                    name: 'Stats',
-                    component: StatsView,
+                    path: 'cart',
+                    name: 'Cart',
+                    component: CartView,
+                    meta: { title: '购物车' },
                 },
+                // 前台 - 订单
+                {
+                    path: 'orders',
+                    name: 'Orders',
+                    component: OrdersView,
+                    meta: { title: '我的订单' },
+                },
+                // 前台 - 账户
+                {
+                    path: 'account',
+                    name: 'Account',
+                    component: AccountView,
+                    meta: { title: '账户管理' },
+                },
+                // 个人资料
                 {
                     path: 'profile',
                     name: 'Profile',
                     component: ProfileView,
+                    meta: { title: '个人资料' },
                 },
-                {
-                    path: 'settings',
-                    name: 'Settings',
-                    component: SettingsView,
-                },
-                {
-                    path: 'color-demo',
-                    name: 'ColorDemo',
-                    component: ColorSchemeDemo,
-                },
+                // 修改密码
                 {
                     path: 'change-password',
                     name: 'ChangePassword',
                     component: ChangePasswordView,
+                    meta: { title: '修改密码' },
+                },
+                // 后台 - 仪表板
+                {
+                    path: 'dashboard',
+                    name: 'Dashboard',
+                    component: DashboardView,
+                    meta: { title: '仪表板', requiresAdmin: true },
+                },
+                // 后台 - 订单管理
+                {
+                    path: 'admin/orders',
+                    name: 'AdminOrders',
+                    component: AdminOrdersView,
+                    meta: { title: '订单管理', requiresAdmin: true },
+                },
+                // 后台 - 库存管理
+                {
+                    path: 'admin/inventory',
+                    name: 'Inventory',
+                    component: InventoryView,
+                    meta: { title: '库存管理', requiresAdmin: true },
                 },
             ],
         },
@@ -94,7 +134,14 @@ router.beforeEach((to, from, next) => {
 
     // 检查是否需要游客状态（已登录用户不能访问登录页）
     if (to.meta.requiresGuest && auth_store.is_authenticated) {
-        next('/dashboard')
+        next('/books')
+        return
+    }
+
+    // 检查是否需要管理员权限
+    if (to.meta.requiresAdmin && !auth_store.is_admin) {
+        alert('需要管理员权限')
+        next('/books')
         return
     }
 

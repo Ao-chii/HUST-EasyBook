@@ -21,7 +21,41 @@
       </v-toolbar-title>
       
       <v-spacer />
-      
+
+      <!-- 角色切换按钮 (开发模式) -->
+      <v-chip
+        v-if="is_dev_mode"
+        :color="auth_store.is_admin ? 'error' : 'success'"
+        class="mr-4"
+        variant="flat"
+        size="large"
+        @click="toggle_admin"
+        style="cursor: pointer; transition: all 0.3s;"
+      >
+        <v-icon start>{{ auth_store.is_admin ? 'mdi-shield-account' : 'mdi-account' }}</v-icon>
+        {{ auth_store.is_admin ? '管理员模式' : '客户模式' }}
+        <v-icon end>mdi-swap-horizontal</v-icon>
+        <v-tooltip activator="parent" location="bottom">
+          点击切换角色 (开发模式)
+        </v-tooltip>
+      </v-chip>
+
+      <!-- 购物车图标 (仅客户模式) -->
+      <v-btn
+        v-if="!auth_store.is_admin"
+        icon
+        class="mr-2"
+        to="/cart"
+      >
+        <v-badge
+          :content="cart_store.total_items"
+          :model-value="cart_store.total_items > 0"
+          color="error"
+        >
+          <v-icon>mdi-cart</v-icon>
+        </v-badge>
+      </v-btn>
+
       <!-- 用户菜单 -->
       <v-menu offset-y>
         <template #activator="{ props }">
@@ -99,7 +133,15 @@
           :value="item.path"
           :to="item.path"
           :active="$route.path === item.path"
-        />
+        >
+          <template v-if="item.badge" #append>
+            <v-badge
+              :content="item.badge"
+              color="error"
+              inline
+            />
+          </template>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
     
@@ -121,12 +163,17 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useCartStore } from '../../stores/cart'
 
 const router = useRouter()
 const auth_store = useAuthStore()
+const cart_store = useCartStore()
 
 // 应用标题
 const app_title = import.meta.env.VITE_APP_TITLE || 'EasyBook'
+
+// 开发模式标志
+const is_dev_mode = ref(true) // 生产环境设置为 false
 
 // 抽屉和边栏状态
 const drawer = ref(true)
@@ -136,40 +183,57 @@ const rail = ref(false)
 const user = computed(() => auth_store.user)
 const user_display_name = computed(() => auth_store.user_display_name)
 
-// 用户头像
-const user_avatar = computed(() => {
-  // 可以后续添加用户头像逻辑
-  return undefined
-})
+// 导航菜单项 - 根据用户角色显示
+const nav_items = computed(() => {
+  const is_admin = auth_store.is_admin
 
-// 导航菜单项
-const nav_items = [
-  {
-    title: '首页',
-    icon: 'mdi-view-dashboard',
-    path: '/dashboard',
-  },
-  {
-    title: '图书管理',
-    icon: 'mdi-book-multiple',
-    path: '/books',
-  },
-  {
-    title: '订单管理',
-    icon: 'mdi-cart',
-    path: '/orders',
-  },
-  {
-    title: '客户管理',
-    icon: 'mdi-account-group',
-    path: '/customers',
-  },
-  {
-    title: '统计分析',
-    icon: 'mdi-chart-line',
-    path: '/stats',
-  },
-]
+  // 前台菜单 (所有用户)
+  const customer_nav = [
+    {
+      title: '图书商城',
+      icon: 'mdi-book-open-variant',
+      path: '/books',
+    },
+    {
+      title: '购物车',
+      icon: 'mdi-cart',
+      path: '/cart',
+      badge: cart_store.total_items > 0 ? cart_store.total_items : undefined,
+    },
+    {
+      title: '我的订单',
+      icon: 'mdi-package-variant',
+      path: '/orders',
+    },
+    {
+      title: '账户管理',
+      icon: 'mdi-account-cash',
+      path: '/account',
+    },
+  ]
+
+  // 后台菜单 (仅管理员)
+  const admin_nav = [
+    {
+      title: '仪表板',
+      icon: 'mdi-view-dashboard',
+      path: '/dashboard',
+    },
+    {
+      title: '订单管理',
+      icon: 'mdi-clipboard-text',
+      path: '/admin/orders',
+    },
+    {
+      title: '库存管理',
+      icon: 'mdi-package-variant-closed',
+      path: '/admin/inventory',
+    },
+  ]
+
+  // 根据角色返回不同菜单
+  return is_admin ? admin_nav : customer_nav
+})
 
 // 导航方法
 const go_to_profile = () => {
@@ -177,13 +241,33 @@ const go_to_profile = () => {
 }
 
 const go_to_settings = () => {
-  router.push('/settings')
+  router.push('/change-password')
 }
 
 // 退出登录
 const handle_logout = () => {
   auth_store.logout()
   router.push('/auth/login')
+}
+
+// 切换管理员/客户模式 (仅开发模式)
+const toggle_admin = () => {
+  if (!auth_store.user) return
+
+  // 切换 is_admin 标志
+  const updated_user = {
+    ...auth_store.user,
+    is_admin: !auth_store.user.is_admin
+  }
+
+  auth_store.update_user(updated_user)
+
+  // 切换后跳转到对应首页
+  if (updated_user.is_admin) {
+    router.push('/dashboard')
+  } else {
+    router.push('/books')
+  }
 }
 </script>
 
