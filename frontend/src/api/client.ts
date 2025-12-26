@@ -8,8 +8,8 @@ import { useAuthStore } from '../stores/auth'
 import router from '../router'
 
 // API基础配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-const API_PREFIX = '/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+const API_PREFIX = '/api'
 
 // 创建axios实例
 const api_client: AxiosInstance = axios.create({

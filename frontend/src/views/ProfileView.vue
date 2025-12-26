@@ -50,20 +50,11 @@
               </v-row>
 
               <v-row>
-                <v-col cols="12" sm="6">
+                <v-col cols="12">
                   <v-text-field
-                    v-model="form_data.first_name"
-                    :rules="[(v) => !!v || '姓不能为空']"
-                    label="姓"
-                    variant="outlined"
-                    :disabled="loading"
-                    prepend-inner-icon="mdi-account-outline"
-                  />
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="form_data.last_name"
-                    label="名"
+                    v-model="form_data.real_name"
+                    :rules="[(v) => !!v || '姓名不能为空']"
+                    label="姓名"
                     variant="outlined"
                     :disabled="loading"
                     prepend-inner-icon="mdi-account-outline"
@@ -71,23 +62,40 @@
                 </v-col>
               </v-row>
 
-              <v-text-field
-                v-model="form_data.phone"
-                :rules="phone_rules"
-                label="手机号"
-                variant="outlined"
-                :disabled="loading"
-                prepend-inner-icon="mdi-phone"
-              />
+              <v-row>
+                <v-col cols="12">
+                  <v-text-field
+                    :model-value="masked_phone"
+                    label="手机号"
+                    variant="outlined"
+                    readonly
+                    prepend-inner-icon="mdi-phone"
+                    hide-details
+                  />
+                  <v-btn
+                    class="mt-2"
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    @click="open_phone_dialog"
+                  >
+                    编辑手机号
+                  </v-btn>
+                </v-col>
+              </v-row>
 
-              <v-select
-                v-model="form_data.role"
-                :items="role_options"
-                label="角色"
-                variant="outlined"
-                readonly
-                prepend-inner-icon="mdi-account-badge"
-              />
+              <v-row>
+                <v-col cols="12">
+                  <v-textarea
+                    v-model="form_data.address"
+                    label="地址"
+                    variant="outlined"
+                    :disabled="loading"
+                    rows="2"
+                  />
+                </v-col>
+              </v-row>
+ 
             </v-form>
           </v-card-text>
           <v-card-actions>
@@ -126,11 +134,11 @@
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>用户ID</v-list-item-title>
-                <v-list-item-subtitle>{{ user?.id }}</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ user?.customer_id }}</v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
                 <v-list-item-title>创建时间</v-list-item-title>
-                <v-list-item-subtitle>{{ format_date(user?.created_at) }}</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ format_date(user?.registration_date) }}</v-list-item-subtitle>
               </v-list-item>
             </v-list>
           </v-card-text>
@@ -174,12 +182,48 @@
         <v-card-title class="text-error">确认删除账户</v-card-title>
         <v-card-text>
           此操作不可逆转。删除账户将永久移除您的所有数据。
+
+          <v-text-field
+            v-model="delete_password"
+            class="mt-4"
+            label="请输入当前密码以确认"
+            type="password"
+            variant="outlined"
+            prepend-inner-icon="mdi-lock"
+            :disabled="loading"
+            :rules="[(v) => !!v || '请输入密码']"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
           <v-btn @click="show_delete_dialog = false">取消</v-btn>
-          <v-btn @click="delete_account" color="error" variant="elevated">
+          <v-btn @click="delete_account" :disabled="!delete_password" :loading="loading" color="error" variant="elevated">
             确认删除
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+ 
+    <!-- 编辑手机号对话框 -->
+    <v-dialog v-model="show_phone_dialog" max-width="420">
+      <v-card>
+        <v-card-title>编辑手机号</v-card-title>
+        <v-card-text>
+          <v-form ref="phone_form_ref" v-model="phone_form_valid">
+            <v-text-field
+              v-model="new_phone"
+              :rules="phone_rules"
+              label="手机号"
+              variant="outlined"
+              prepend-inner-icon="mdi-phone"
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="show_phone_dialog = false">取消</v-btn>
+          <v-btn :disabled="!phone_form_valid" :loading="loading" color="primary" @click="save_phone">
+            保存
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -200,6 +244,11 @@ const form_ref = ref()
 const form_valid = ref(false)
 const loading = ref(false)
 const show_delete_dialog = ref(false)
+const show_phone_dialog = ref(false)
+const delete_password = ref('')
+const new_phone = ref('')
+const phone_form_ref = ref()
+const phone_form_valid = ref(false)
 
 const snackbar = reactive({
   show: false,
@@ -210,24 +259,27 @@ const snackbar = reactive({
 const form_data = reactive({
   username: '',
   email: '',
-  first_name: '',
-  last_name: '',
+  real_name: '',
   phone: '',
-  role: ''
+  address: ''
 })
 
 const original_data = ref({})
 
 const user = computed(() => auth_store.user)
 
-const role_options = [
-  { title: '普通用户', value: 'customer' },
-  { title: '管理员', value: 'admin' },
-  { title: 'VIP用户', value: 'vip' }
-]
+const role_options = []
+
+const masked_phone = computed(() => {
+  const p = String(form_data.phone || '')
+  if (!p) return ''
+  const last4 = p.slice(-4)
+  return '*'.repeat(Math.max(p.length - 4, 0)) + last4
+})
 
 const phone_rules = [
-  (v: string) => !v || /^1[3-9]\d{9}$/.test(v) || '请输入有效的手机号码'
+  (v: string) => !!v || '请输入手机号',
+  (v: string) => /^1[3-9]\d{9}$/.test(v) || '请输入有效的手机号码'
 ]
 
 const has_changes = computed(() => {
@@ -244,10 +296,9 @@ const load_profile = () => {
     const data = {
       username: user.value.username || '',
       email: user.value.email || '',
-      first_name: user.value.first_name || '',
-      last_name: user.value.last_name || '',
+      real_name: user.value.real_name || '',
       phone: user.value.phone || '',
-      role: user.value.role || 'driver'
+      address: user.value.address || ''
     }
     Object.assign(form_data, data)
     original_data.value = { ...data }
@@ -263,11 +314,14 @@ const save_profile = async () => {
   
   loading.value = true
   try {
-    await auth_api.update_profile({
-      first_name: form_data.first_name,
-      last_name: form_data.last_name,
-      phone: form_data.phone
-    })
+    const payload: any = {
+      real_name: form_data.real_name,
+      address: form_data.address
+    }
+    if (form_data.phone && form_data.phone.trim()) {
+      payload.phone = form_data.phone
+    }
+    await auth_api.update_profile(payload)
     
     await auth_store.fetch_user_profile()
     load_profile()
@@ -286,19 +340,62 @@ const save_profile = async () => {
 }
 
 const delete_account = async () => {
-  try {
-    await auth_api.delete_account()
-    auth_store.logout()
-    router.push('/auth/login')
-  } catch (error: any) {
-    snackbar.message = error.message || '删除账户失败'
+  if (!delete_password.value) {
+    snackbar.message = '请输入密码以确认删除'
     snackbar.color = 'error'
     snackbar.show = true
+    return
   }
-  show_delete_dialog.value = false
+
+  loading.value = true
+  try {
+    await auth_api.delete_account(delete_password.value)
+
+    // 注销成功：清理本地登录态并跳转登录页
+    auth_store.logout()
+    snackbar.message = '账户已注销'
+    snackbar.color = 'success'
+    snackbar.show = true
+
+    show_delete_dialog.value = false
+    delete_password.value = ''
+    await router.push('/auth/login')
+  } catch (error: any) {
+    snackbar.message = error.message || '注销失败'
+    snackbar.color = 'error'
+    snackbar.show = true
+  } finally {
+    loading.value = false
+  }
 }
 
-onMounted(() => {
+const open_phone_dialog = () => {
+  new_phone.value = form_data.phone || ''
+  show_phone_dialog.value = true
+}
+
+const save_phone = async () => {
+  if (!phone_form_valid.value) return
+  loading.value = true
+  try {
+    await auth_api.update_profile({ phone: new_phone.value })
+    await auth_store.fetch_user_profile()
+    form_data.phone = auth_store.user?.phone || ''
+    snackbar.message = '手机号已更新'
+    snackbar.color = 'success'
+    snackbar.show = true
+    show_phone_dialog.value = false
+  } catch (error: any) {
+    snackbar.message = error.message || '更新失败'
+    snackbar.color = 'error'
+    snackbar.show = true
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  await auth_store.fetch_user_profile()
   load_profile()
 })
 </script>

@@ -3,7 +3,11 @@
     "allow": [
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(curl:*)",
+      "Bash(mysql:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)"
     ]
   }
 }

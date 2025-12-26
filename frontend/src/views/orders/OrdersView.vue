@@ -69,6 +69,11 @@ const pay_order = async (order_id: string) => {
     await order_api.pay_order(order_id, 'balance')
     alert('支付成功！')
     fetch_orders()
+    try {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth_store = useAuthStore()
+      await auth_store.fetch_user_profile()
+    } catch {}
   } catch (error: any) {
     alert(error.response?.data?.message || '支付失败')
   }
@@ -82,6 +87,11 @@ const cancel_order = async (order_id: string) => {
     await order_api.cancel_order(order_id, '用户取消')
     alert('订单已取消')
     fetch_orders()
+    try {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth_store = useAuthStore()
+      await auth_store.fetch_user_profile()
+    } catch {}
   } catch (error: any) {
     alert(error.response?.data?.message || '取消失败')
   }
@@ -95,8 +105,24 @@ const confirm_delivery = async (order_id: string) => {
     await order_api.confirm_delivery(order_id)
     alert('确认收货成功！')
     fetch_orders()
+    try {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth_store = useAuthStore()
+      await auth_store.fetch_user_profile()
+    } catch {}
   } catch (error: any) {
     alert(error.response?.data?.message || '确认失败')
+  }
+}
+
+const delete_order = async (order_id: string) => {
+  if (!confirm('确认删除该订单吗？删除后无法恢复')) return
+  try {
+    await order_api.delete_order(order_id)
+    alert('订单已删除')
+    fetch_orders()
+  } catch (error: any) {
+    alert(error.response?.data?.message || '删除失败')
   }
 }
 
@@ -189,6 +215,15 @@ onMounted(() => {
                 </div>
               </v-col>
             </v-row>
+            <v-alert
+              v-if="order.order_status === 'processing'"
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mt-2"
+            >
+              缺货：当前库存不足，补货后将自动恢复为“待支付”
+            </v-alert>
 
             <div v-if="order.payment_time" class="text-caption mt-2">
               支付时间: {{ new Date(order.payment_time).toLocaleString() }}
@@ -253,6 +288,18 @@ onMounted(() => {
                 @click="confirm_delivery(order.order_id)"
               >
                 确认收货
+              </v-btn>
+            </template>
+
+            <!-- 已送达状态 -->
+            <template v-if="order.order_status === 'delivered'">
+              <v-btn
+                size="small"
+                color="error"
+                variant="outlined"
+                @click="delete_order(order.order_id)"
+              >
+                删除订单
               </v-btn>
             </template>
           </v-card-actions>

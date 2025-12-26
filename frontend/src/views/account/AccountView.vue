@@ -55,7 +55,8 @@ const do_recharge = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try { await auth_store.fetch_user_profile() } catch {}
   auth_store.fetch_credit_rules()
 })
 </script>
@@ -80,12 +81,12 @@ onMounted(() => {
           </v-card-title>
           <v-card-text>
             <div class="text-h3" style="color: var(--primary-100);">
-              ¥{{ auth_store.user?.account_balance.toFixed(2) }}
+              ¥{{ (auth_store.user?.account_balance ?? 0).toFixed(2) }}
             </div>
             <div v-if="credit_info && credit_info.overdraft_enabled" class="mt-4">
               <div class="text-subtitle-2 mb-2">透支额度</div>
               <div class="text-h6">
-                ¥{{ credit_info.overdraft_limit.toFixed(2) }}
+                ¥{{ (credit_info?.overdraft_limit ?? 0).toFixed(2) }}
               </div>
             </div>
             <div class="mt-4">
@@ -119,7 +120,7 @@ onMounted(() => {
                 <v-list-item-title>累计消费</v-list-item-title>
                 <template #append>
                   <span class="font-weight-bold">
-                    ¥{{ auth_store.user?.total_purchase.toFixed(2) }}
+                    ¥{{ (auth_store.user?.total_purchase ?? 0).toFixed(2) }}
                   </span>
                 </template>
               </v-list-item>
@@ -151,10 +152,10 @@ onMounted(() => {
                   </v-chip>
                   <div>
                     <div class="text-h6" style="color: var(--primary-100);">
-                      {{ (credit_info?.discount_rate * 100).toFixed(0) }}% 折扣
+                      {{ ((credit_info?.discount_rate ?? 0) * 100).toFixed(0) }}% 折扣
                     </div>
                     <div v-if="credit_info?.overdraft_enabled" class="text-caption">
-                      可透支 ¥{{ credit_info.overdraft_limit.toFixed(2) }}
+                      可透支 ¥{{ (credit_info?.overdraft_limit ?? 0).toFixed(2) }}
                     </div>
                   </div>
                 </div>
@@ -168,13 +169,13 @@ onMounted(() => {
                     </strong>
                   </div>
                   <v-progress-linear
-                    :model-value="(credit_info!.total_purchase / next_level_info.required_purchase) * 100"
+                    :model-value="next_level_info.required_purchase ? (((credit_info?.total_purchase ?? 0) / next_level_info.required_purchase) * 100) : 0"
                     color="primary"
                     height="8"
                     rounded
                   />
                   <div class="text-caption mt-1" style="color: var(--text-200);">
-                    {{ credit_info!.total_purchase.toFixed(0) }} / {{ next_level_info.required_purchase }}
+                    {{ (credit_info?.total_purchase ?? 0).toFixed(0) }} / {{ next_level_info.required_purchase }}
                   </div>
                 </div>
 

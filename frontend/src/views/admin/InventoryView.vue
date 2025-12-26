@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { inventory_api } from '@/api'
+import { inventory_api, book_api } from '@/api'
 import type { InventoryInfo } from '@/types'
 
 const inventories = ref<InventoryInfo[]>([])
 const loading = ref(false)
 const selected_status = ref<string>('')
+
+const detail_dialog = ref(false)
+const detail_loading = ref(false)
+const detail_isbn = ref('')
+const detail_book = ref<any>(null)
+const detail_inventory = ref<any>(null)
 
 // 调整库存对话框
 const adjust_dialog = ref(false)
@@ -54,6 +60,24 @@ const fetch_inventory = async () => {
     alert(error.response?.data?.message || '获取库存列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+const open_detail = async (isbn: string) => {
+  try {
+    detail_dialog.value = true
+    detail_loading.value = true
+    detail_isbn.value = isbn
+    const [invResp, bookResp] = await Promise.all([
+      inventory_api.get_inventory_detail(isbn),
+      book_api.get_book(isbn)
+    ])
+    detail_inventory.value = invResp.data.data?.inventory || null
+    detail_book.value = bookResp.data.data || null
+  } catch (error: any) {
+    alert(error.response?.data?.message || '获取详情失败')
+  } finally {
+    detail_loading.value = false
   }
 }
 
@@ -146,8 +170,6 @@ onMounted(() => {
               <tr>
                 <th>ISBN</th>
                 <th>当前库存</th>
-                <th>预留数量</th>
-                <th>可用库存</th>
                 <th>安全库存</th>
                 <th>状态</th>
                 <th>仓库</th>
@@ -157,26 +179,11 @@ onMounted(() => {
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="item in inventories"
-                :key="item.inventory_id"
-              >
+              <tr v-for="item in inventories" :key="item.inventory_id">
                 <td>
                   <span class="font-weight-medium">{{ item.isbn }}</span>
                 </td>
                 <td>{{ item.quantity }}</td>
-                <td class="text-warning">{{ item.reserved_quantity }}</td>
-                <td>
-                  <span
-                    :class="{
-                      'text-success': item.available_quantity > item.safety_stock,
-                      'text-warning': item.available_quantity <= item.safety_stock && item.available_quantity > 0,
-                      'text-error': item.available_quantity === 0
-                    }"
-                  >
-                    {{ item.available_quantity }}
-                  </span>
-                </td>
                 <td>{{ item.safety_stock }}</td>
                 <td>
                   <v-chip
@@ -195,7 +202,15 @@ onMounted(() => {
                   </span>
                   <span v-else class="text-caption text-grey">未补货</span>
                 </td>
-                <td>
+                <td class="v-align-center">
+                  <v-btn
+                    size="small"
+                    variant="tonal"
+                    color="secondary"
+                    @click="open_detail(item.isbn)"
+                  >
+                    查看详情
+                  </v-btn>
                   <v-btn
                     size="small"
                     variant="tonal"
@@ -307,5 +322,76 @@ onMounted(() => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 查看详情对话框 -->
+    <v-dialog v-model="detail_dialog" max-width="800">
+      <v-card>
+        <v-card-title>库存详情</v-card-title>
+        <v-card-text>
+          <div v-if="detail_loading" class="text-center py-8">
+            <v-progress-circular indeterminate color="primary" />
+          </div>
+          <div v-else>
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-img
+                  :src="detail_book?.cover_image"
+                  height="180"
+                  class="mb-2"
+                  cover
+                />
+                <div class="text-subtitle-1">{{ detail_book?.title }}</div>
+                <div class="text-caption">
+                  作者：{{ detail_book?.authors?.map((a: any) => a.author_name).join('，') || '-' }}
+                </div>
+                <div class="text-caption">
+                  出版社：{{ detail_book?.publisher?.publisher_name || '-' }}
+                </div>
+                <div class="text-caption">
+                  价格：￥{{ detail_book?.price ?? 0 }}
+                </div>
+              </v-col>
+              <v-col cols="12" md="8">
+                <v-row>
+                  <v-col cols="6">
+                    <div class="text-body-2">当前库存：{{ detail_book?.inventory?.quantity ?? detail_inventory?.quantity ?? 0 }}</div>
+                  </v-col>
+                  <v-col cols="6">
+                    <div class="text-body-2">预留数量：{{ detail_book?.inventory?.reserved_quantity ?? detail_inventory?.reserved_quantity ?? 0 }}</div>
+                  </v-col>
+                  <v-col cols="6">
+                    <div class="text-body-2">可用库存：{{ detail_book?.inventory?.available_quantity ?? detail_inventory?.available_quantity ?? 0 }}</div>
+                  </v-col>
+                  <v-col cols="6">
+                    <div class="text-body-2">安全库存：{{ detail_book?.inventory?.safety_stock ?? detail_inventory?.safety_stock ?? 0 }}</div>
+                  </v-col>
+                  <v-col cols="6">
+                    <div class="text-body-2">仓库：{{ detail_inventory?.warehouse || 'main' }}</div>
+                  </v-col>
+                  <v-col cols="6">
+                    <div class="text-body-2">位置：{{ detail_inventory?.location_code || '-' }}</div>
+                  </v-col>
+                </v-row>
+              </v-col>
+            </v-row>
+            <v-divider class="my-4" />
+            <div class="text-body-2">
+              目录：{{ detail_book?.table_of_contents || '无' }}
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="detail_dialog = false">关闭</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
+
+<style scoped>
+.v-align-center {
+  display: flex;
+  align-items: center;
+}
+</style>

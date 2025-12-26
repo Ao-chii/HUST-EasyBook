@@ -39,11 +39,16 @@ const remove_item = async (item_id: string) => {
 }
 
 // 去结算
-const go_to_checkout = () => {
+const go_to_checkout = async () => {
   if (cart_store.is_empty) {
     alert('购物车是空的')
     return
   }
+
+  // 同步最新用户资料
+  try {
+    await auth_store.fetch_user_profile()
+  } catch {}
 
   // 预填充用户信息
   if (auth_store.user) {

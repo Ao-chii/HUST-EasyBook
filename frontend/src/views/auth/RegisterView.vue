@@ -12,7 +12,7 @@
         用户注册
       </h1>
       <p class="text-subtitle-1 text-medium-emphasis">
-        创建您的SafePilot账户
+        创建您的EasyBook账户
       </p>
     </div>
     
@@ -48,29 +48,31 @@
           clearable
         />
 
-        <!-- 姓名输入 -->
-        <v-row class="mb-4">
-          <v-col cols="6">
-            <v-text-field
-              v-model="form_data.first_name"
-              :rules="first_name_rules"
-              label="姓"
-              prepend-inner-icon="mdi-account-outline"
-              variant="outlined"
-              :disabled="loading"
-              autocomplete="given-name"
-            />
-          </v-col>
-          <v-col cols="6">
-            <v-text-field
-              v-model="form_data.last_name"
-              label="名"
-              variant="outlined"
-              :disabled="loading"
-              autocomplete="family-name"
-            />
-          </v-col>
-        </v-row>
+        <!-- 真实姓名输入 -->
+        <v-text-field
+          v-model="form_data.real_name"
+          :rules="real_name_rules"
+          label="真实姓名"
+          prepend-inner-icon="mdi-account-outline"
+          variant="outlined"
+          :disabled="loading"
+          autocomplete="name"
+          class="mb-4"
+          clearable
+        />
+
+        <!-- 地址输入 -->
+        <v-text-field
+          v-model="form_data.address"
+          :rules="address_rules"
+          label="地址"
+          prepend-inner-icon="mdi-map-marker"
+          variant="outlined"
+          :disabled="loading"
+          autocomplete="street-address"
+          class="mb-4"
+          clearable
+        />
 
         <!-- 手机号输入 -->
         <v-text-field
@@ -130,16 +132,6 @@
           />
         </div>
 
-        <!-- 用户角色选择 -->
-        <v-select
-          v-model="form_data.role"
-          :items="role_options"
-          label="用户角色"
-          prepend-inner-icon="mdi-account-badge"
-          variant="outlined"
-          :disabled="loading"
-          class="mb-4"
-        />
 
         <!-- 服务条款同意 -->
         <v-checkbox
@@ -220,7 +212,7 @@
         <v-card-text class="pa-4" style="max-height: 400px; overflow-y: auto;">
           <div class="text-body-2">
             <h3>1. 服务说明</h3>
-            <p>SafePilot驾驶员安全监控系统为用户提供实时驾驶行为监测和分析服务。</p>
+            <p>EasyBook在线书店为用户提供图书浏览、购买和订单管理服务。</p>
             
             <h3>2. 用户责任</h3>
             <p>用户应合法使用本系统，不得进行任何违法违规活动。</p>
@@ -229,7 +221,7 @@
             <p>我们承诺保护用户隐私，详见隐私政策。</p>
             
             <h3>4. 免责声明</h3>
-            <p>本系统仅作为辅助工具，不能替代驾驶员的安全责任。</p>
+            <p>本系统仅作为图书销售平台，商品信息由书店提供，我们不对商品质量负责。</p>
           </div>
         </v-card-text>
         <v-card-actions>
@@ -246,10 +238,10 @@
         <v-card-text class="pa-4" style="max-height: 400px; overflow-y: auto;">
           <div class="text-body-2">
             <h3>1. 信息收集</h3>
-            <p>我们仅收集必要的用户信息和驾驶行为数据。</p>
+            <p>我们仅收集必要的用户信息和订单数据。</p>
             
             <h3>2. 信息使用</h3>
-            <p>收集的信息仅用于提供服务和改进系统功能。</p>
+            <p>收集的信息仅用于提供购书服务和改进系统功能。</p>
             
             <h3>3. 信息保护</h3>
             <p>我们采用业界标准的安全措施保护用户数据。</p>
@@ -289,21 +281,13 @@ const success_message = ref('')
 const form_data = reactive({
   username: '',
   email: '',
-  first_name: '',
-  last_name: '',
+  real_name: '',
+  address: '',
   phone: '',
   password: '',
   confirm_password: '',
-  role: 'driver',
   agree_terms: false,
 })
-
-// 角色选项
-const role_options = [
-  { title: '驾驶员', value: 'driver' },
-  { title: '管理员', value: 'admin' },
-  { title: '监督员', value: 'supervisor' },
-]
 
 // 验证规则
 const username_rules = [
@@ -318,9 +302,16 @@ const email_rules = [
   (v: string) => /.+@.+\..+/.test(v) || '请输入有效的邮箱地址',
 ]
 
-const first_name_rules = [
-  (v: string) => !!v || '请输入姓氏',
-  (v: string) => v.length >= 1 || '姓氏不能为空',
+// 新增真实姓名验证规则
+const real_name_rules = [
+  (v: string) => !!v || '请输入真实姓名',
+  (v: string) => v.length >= 2 || '姓名至少2个字符',
+]
+
+// 新增地址验证规则
+const address_rules = [
+  (v: string) => !!v || '请输入地址',
+  (v: string) => v.length >= 5 || '地址至少5个字符',
 ]
 
 const phone_rules = [
@@ -383,11 +374,10 @@ const handle_register = async () => {
     const response = await auth_api.register({
       username: form_data.username,
       email: form_data.email,
-      first_name: form_data.first_name,
-      last_name: form_data.last_name,
+      real_name: form_data.real_name,
       phone: form_data.phone,
+      address: form_data.address,
       password: form_data.password,
-      role: form_data.role,
     })
     
     success_message.value = '注册成功！3秒后自动跳转到登录页面'

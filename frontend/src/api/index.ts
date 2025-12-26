@@ -58,6 +58,10 @@ export const auth_api = {
     new_password: string
   }) =>
     api_client.post<ApiResponse<null>>('/auth/change-password', data),
+
+  // 删除账户（需要验证密码）
+  delete_account: (password: string) =>
+    api_client.delete<ApiResponse<null>>('/auth/profile', { data: { password } }),
 }
 
 // ============ 图书相关接口 ============
@@ -139,12 +143,13 @@ export const order_api = {
     end_date?: string
     page?: number
     page_size?: number
+    all?: boolean
   }) =>
     api_client.get<ApiResponse<PaginatedResponse<Order>>>('/orders', { params }),
 
   // 获取订单详情
   get_order: (order_id: string) =>
-    api_client.get<ApiResponse<OrderWithDetails>>(`/orders/${order_id}`),
+    api_client.get<ApiResponse<{ order: Order; details: OrderDetail[]; delivery?: DeliveryOrder }>>(`/orders/${order_id}`),
 
   // 创建订单 (从购物车结算)
   create_order: (data: {
@@ -164,6 +169,10 @@ export const order_api = {
   cancel_order: (order_id: string, reason?: string) =>
     api_client.post<ApiResponse<null>>(`/orders/${order_id}/cancel`, { reason }),
 
+  // 删除订单（客户）
+  delete_order: (order_id: string) =>
+    api_client.delete<ApiResponse<null>>(`/orders/${order_id}`),
+
   // 确认收货
   confirm_delivery: (order_id: string) =>
     api_client.post<ApiResponse<null>>(`/orders/${order_id}/confirm`),
@@ -174,6 +183,10 @@ export const order_api = {
     tracking_no: string
   }) =>
     api_client.post<ApiResponse<{ delivery_id: string; delivery_no: string }>>(`/admin/orders/${order_id}/ship`, data),
+  
+  // 删除订单（管理员）
+  admin_delete_order: (order_id: string) =>
+    api_client.delete<ApiResponse<null>>(`/admin/orders/${order_id}`),
 }
 
 // ============ 账户相关接口 ============
@@ -266,6 +279,8 @@ export const shortage_api = {
     required_quantity: number
     remark?: string
     priority?: number
+    supplier_id?: string
+    source_type?: 'manual' | 'customer'
   }) =>
     api_client.post<ApiResponse<OutOfStockRecord>>('/out-of-stock', data),
 
@@ -280,6 +295,10 @@ export const shortage_api = {
   // 发送到货通知
   send_notification: (record_id: string) =>
     api_client.post<ApiResponse<null>>(`/admin/out-of-stock/${record_id}/notify`),
+
+  // 扫描库存生成缺书记录 (管理员)
+  scan_shortages: (min_safety?: number) =>
+    api_client.post<ApiResponse<null>>('/admin/out-of-stock/scan', min_safety ? { min_safety } : {}),
 }
 
 // ============ 采购相关接口 (管理员) ============
@@ -315,6 +334,33 @@ export const purchase_api = {
     api_client.post<ApiResponse<null>>(`/admin/purchases/${purchase_id}/receive`, data),
 }
 
+// ============ 供应商相关接口 (管理员) ============
+export const supplier_api = {
+  // 供应商列表
+  get_suppliers: (params?: { keyword?: string }) =>
+    api_client.get<ApiResponse<Supplier[]>>('/admin/suppliers', { params }),
+  // 新增供应商
+  create_supplier: (data: Partial<Supplier>) =>
+    api_client.post<ApiResponse<Supplier>>('/admin/suppliers', data),
+  // 更新供应商
+  update_supplier: (supplier_id: string, data: Partial<Supplier>) =>
+    api_client.put<ApiResponse<Supplier>>(`/admin/suppliers/${supplier_id}`, data),
+  // 删除供应商
+  delete_supplier: (supplier_id: string) =>
+    api_client.delete<ApiResponse<null>>(`/admin/suppliers/${supplier_id}`),
+  // 供应商图书
+  get_supplier_books: (supplier_id: string) =>
+    api_client.get<ApiResponse<any[]>>(`/admin/suppliers/${supplier_id}/books`),
+  upsert_supplier_book: (supplier_id: string, data: {
+    isbn: string
+    supply_price: number
+    min_order_quantity?: number
+    delivery_days?: number
+    is_available?: boolean
+  }) =>
+    api_client.post<ApiResponse<any>>(`/admin/suppliers/${supplier_id}/books`, data),
+}
+
 // ============ 统计相关接口 (管理员) ============
 export const stats_api = {
   // 仪表板数据
@@ -340,6 +386,43 @@ export const stats_api = {
   // 库存统计
   get_inventory_stats: () =>
     api_client.get<ApiResponse<any>>('/admin/stats/inventory'),
+}
+
+// ============ 丛书相关接口 ============
+export const book_series_api = {
+  // 获取丛书列表
+  get_series: (params?: { keyword?: string; publisherId?: string }) =>
+    api_client.get<ApiResponse<any[]>>('/admin/book-series', { params }),
+
+  // 获取丛书详情
+  get_series_detail: (seriesId: string) =>
+    api_client.get<ApiResponse<any>>(`/admin/book-series/${seriesId}`),
+
+  // 获取丛书包含的图书
+  get_series_books: (seriesId: string) =>
+    api_client.get<ApiResponse<Book[]>>(`/admin/book-series/${seriesId}/books`),
+
+  // 创建丛书
+  create_series: (data: {
+    series_name: string
+    publisher_id: string
+    total_books?: number
+    description?: string
+  }) =>
+    api_client.post<ApiResponse<any>>('/admin/book-series', data),
+
+  // 更新丛书
+  update_series: (seriesId: string, data: {
+    series_name?: string
+    publisher_id?: string
+    total_books?: number
+    description?: string
+  }) =>
+    api_client.put<ApiResponse<any>>(`/admin/book-series/${seriesId}`, data),
+
+  // 删除丛书
+  delete_series: (seriesId: string) =>
+    api_client.delete<ApiResponse<null>>(`/admin/book-series/${seriesId}`),
 }
 
 // ============ 系统相关接口 ============

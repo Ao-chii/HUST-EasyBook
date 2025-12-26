@@ -23,7 +23,7 @@
       <v-spacer />
 
       <!-- 角色切换按钮 (开发模式) -->
-      <v-chip
+      <!-- <v-chip
         v-if="is_dev_mode"
         :color="auth_store.is_admin ? 'error' : 'success'"
         class="mr-4"
@@ -38,12 +38,14 @@
         <v-tooltip activator="parent" location="bottom">
           点击切换角色 (开发模式)
         </v-tooltip>
-      </v-chip>
+      </v-chip> -->
 
       <!-- 购物车图标 (仅客户模式) -->
       <v-btn
         v-if="!auth_store.is_admin"
         icon
+        variant="tonal"
+        color="accent-lighten-1"
         class="mr-2"
         to="/cart"
       >
@@ -61,6 +63,8 @@
         <template #activator="{ props }">
           <v-btn
             icon
+            variant="tonal"
+            color="accent-lighten-1"
             v-bind="props"
           >
             <v-avatar size="32">
@@ -134,9 +138,9 @@
           :to="item.path"
           :active="$route.path === item.path"
         >
-          <template v-if="item.badge" #append>
+          <template v-if="('badge' in item) && (item as any).badge" #append>
             <v-badge
-              :content="item.badge"
+              :content="(item as any).badge"
               color="error"
               inline
             />
@@ -220,6 +224,11 @@ const nav_items = computed(() => {
       path: '/dashboard',
     },
     {
+      title: '图书管理',
+      icon: 'mdi-book-open-variant',
+      path: '/admin/books',
+    },
+    {
       title: '订单管理',
       icon: 'mdi-clipboard-text',
       path: '/admin/orders',
@@ -228,6 +237,31 @@ const nav_items = computed(() => {
       title: '库存管理',
       icon: 'mdi-package-variant-closed',
       path: '/admin/inventory',
+    },
+    {
+      title: '采购管理',
+      icon: 'mdi-clipboard-list',
+      path: '/admin/purchases',
+    },
+    {
+      title: '供应商管理',
+      icon: 'mdi-truck',
+      path: '/admin/suppliers',
+    },
+    {
+      title: '缺书管理',
+      icon: 'mdi-alert-circle',
+      path: '/admin/shortages',
+    },
+    {
+      title: '客户管理',
+      icon: 'mdi-account-group',
+      path: '/admin/customers',
+    },
+    {
+      title: '丛书管理',
+      icon: 'mdi-book-multiple',
+      path: '/admin/book-series',
     },
   ]
 

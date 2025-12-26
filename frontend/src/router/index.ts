@@ -16,20 +16,28 @@ import ProfileView from '../views/ProfileView.vue'
 
 // 前台页面 (客户)
 import BooksView from '../views/books/BooksView.vue'
+import BookDetailView from '../views/books/BookDetailView.vue'
 import CartView from '../views/cart/CartView.vue'
 import OrdersView from '../views/orders/OrdersView.vue'
+import OrderDetailView from '../views/orders/OrderDetailView.vue'
 import AccountView from '../views/account/AccountView.vue'
 
 // 后台页面 (管理员)
 import AdminOrdersView from '../views/admin/AdminOrdersView.vue'
+import AdminBooksView from '../views/admin/AdminBooksView.vue'
 import InventoryView from '../views/admin/InventoryView.vue'
+import AdminPurchasesView from '../views/admin/AdminPurchasesView.vue'
+import SuppliersView from '../views/admin/SuppliersView.vue'
+import AdminShortagesView from '../views/admin/AdminShortagesView.vue'
+import AdminCustomersView from '../views/admin/AdminCustomersView.vue'
+import BookSeriesView from '../views/admin/BookSeriesView.vue'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
         {
             path: '/',
-            redirect: '/books',
+            redirect: '/auth/login',
         },
         {
             path: '/auth',
@@ -61,6 +69,12 @@ const router = createRouter({
                     component: BooksView,
                     meta: { title: '图书商城' },
                 },
+                {
+                    path: 'books/:isbn',
+                    name: 'BookDetail',
+                    component: BookDetailView,
+                    meta: { title: '图书详情' },
+                },
                 // 前台 - 购物车
                 {
                     path: 'cart',
@@ -74,6 +88,12 @@ const router = createRouter({
                     name: 'Orders',
                     component: OrdersView,
                     meta: { title: '我的订单' },
+                },
+                {
+                    path: 'orders/:orderId',
+                    name: 'OrderDetail',
+                    component: OrderDetailView,
+                    meta: { title: '订单详情' },
                 },
                 // 前台 - 账户
                 {
@@ -103,6 +123,13 @@ const router = createRouter({
                     component: DashboardView,
                     meta: { title: '仪表板', requiresAdmin: true },
                 },
+                // 后台 - 图书管理
+                {
+                    path: 'admin/books',
+                    name: 'AdminBooks',
+                    component: AdminBooksView,
+                    meta: { title: '图书管理', requiresAdmin: true },
+                },
                 // 后台 - 订单管理
                 {
                     path: 'admin/orders',
@@ -110,12 +137,50 @@ const router = createRouter({
                     component: AdminOrdersView,
                     meta: { title: '订单管理', requiresAdmin: true },
                 },
+                {
+                    path: 'admin/orders/:orderId',
+                    name: 'AdminOrderDetail',
+                    component: () => import('../views/admin/AdminOrderDetailView.vue'),
+                    meta: { title: '订单详情', requiresAdmin: true },
+                },
                 // 后台 - 库存管理
                 {
                     path: 'admin/inventory',
                     name: 'Inventory',
                     component: InventoryView,
                     meta: { title: '库存管理', requiresAdmin: true },
+                },
+                {
+                    path: 'admin/purchases',
+                    name: 'AdminPurchases',
+                    component: AdminPurchasesView,
+                    meta: { title: '采购管理', requiresAdmin: true },
+                },
+                {
+                    path: 'admin/suppliers',
+                    name: 'Suppliers',
+                    component: SuppliersView,
+                    meta: { title: '供应商管理', requiresAdmin: true },
+                },
+                {
+                    path: 'admin/shortages',
+                    name: 'AdminShortages',
+                    component: AdminShortagesView,
+                    meta: { title: '缺书管理', requiresAdmin: true },
+                },
+                // 后台 - 客户管理
+                {
+                    path: 'admin/customers',
+                    name: 'AdminCustomers',
+                    component: AdminCustomersView,
+                    meta: { title: '客户管理', requiresAdmin: true },
+                },
+                // 后台 - 丛书管理
+                {
+                    path: 'admin/book-series',
+                    name: 'BookSeries',
+                    component: BookSeriesView,
+                    meta: { title: '丛书管理', requiresAdmin: true },
                 },
             ],
         },
@@ -141,7 +206,7 @@ router.beforeEach((to, from, next) => {
     // 检查是否需要管理员权限
     if (to.meta.requiresAdmin && !auth_store.is_admin) {
         alert('需要管理员权限')
-        next('/books')
+        next('/auth/login')
         return
     }
 

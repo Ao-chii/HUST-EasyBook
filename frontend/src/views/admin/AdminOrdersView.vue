@@ -54,7 +54,8 @@ const fetch_orders = async () => {
     const response = await order_api.get_orders({
       status: selected_status.value || undefined,
       page: 1,
-      page_size: 100
+      page_size: 100,
+      all: true
     })
     orders.value = response.data.data?.items || []
   } catch (error: any) {
@@ -87,11 +88,22 @@ const ship_order = async () => {
       tracking_no: tracking_no.value
     })
 
-    alert('发货成功！\n后端调用了 sp_process_delivery 存储过程：\n1. 扣除客户余额\n2. 扣减库存\n3. 释放预留库存\n4. 更新订单状态')
+    alert('发货成功！\n后端调用了 sp_process_delivery 存储过程：\n1. 扣减库存\n2. 释放预留库存\n3. 更新订单状态')
     ship_dialog.value = false
     fetch_orders()
   } catch (error: any) {
     alert(error.response?.data?.message || '发货失败')
+  }
+}
+
+const delete_order = async (order_id: string) => {
+  if (!confirm('确认删除该订单吗？删除后无法恢复')) return
+  try {
+    await order_api.admin_delete_order(order_id)
+    alert('订单已删除')
+    fetch_orders()
+  } catch (error: any) {
+    alert(error.response?.data?.message || '删除失败')
   }
 }
 
@@ -109,7 +121,7 @@ onMounted(() => {
         </h1>
         <p class="text-body-2" style="color: var(--text-200);">
           <v-icon size="small">mdi-information</v-icon>
-          发货操作会调用 <code>sp_process_delivery</code> 存储过程，执行扣款、扣减库存等操作
+          发货操作会调用 <code>sp_process_delivery</code> 存储过程，扣减库存、释放预留库存等操作
         </p>
       </v-col>
     </v-row>
@@ -205,14 +217,24 @@ onMounted(() => {
                   >
                     已发货
                   </v-btn>
-                  <v-btn
-                    v-else
-                    size="small"
-                    variant="text"
-                    :to="`/admin/orders/${order.order_id}`"
-                  >
-                    详情
-                  </v-btn>
+                  <template v-else>
+                    <v-btn
+                      size="small"
+                      variant="text"
+                      :to="`/admin/orders/${order.order_id}`"
+                    >
+                      详情
+                    </v-btn>
+                    <v-btn
+                      v-if="order.order_status === 'delivered'"
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      @click="delete_order(order.order_id)"
+                    >
+                      删除
+                    </v-btn>
+                  </template>
                 </td>
               </tr>
             </tbody>
@@ -282,7 +304,6 @@ onMounted(() => {
                 <strong>重要:</strong> 点击发货后，系统将：
                 <ul class="ml-4 mt-1">
                   <li>调用 <code>sp_process_delivery</code> 存储过程</li>
-                  <li>从客户账户扣除订单金额</li>
                   <li>扣减库存数量</li>
                   <li>释放预留库存</li>
                   <li>更新订单状态为"已发货"</li>
